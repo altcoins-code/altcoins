@@ -6,15 +6,16 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
+import json
 
-NUMERIC = ['mining hw cost', 'price', 'market cap', 'percent change', 'liquidity', 'stars', 'forks', 'watchers',
+NUMERIC = ['mining hw cost', 'price btc', 'market cap', 'percent change', 'liquidity', 'stars', 'forks', 'watchers',
            'total issues', 'closed issues', 'merged pr', 'contributors', 'recent commits', 'subscribers',
            'active users', 'posts per hr', 'comments per hr', 'fb likes', 'twitter followers', 'bing results',
            'alexa rating']
-ORDER = ['name', 'price', 'overall score', 'dev score', 'social score', 'search score', 'percent change', 'market cap',
+ORDER = ['name', 'price usd', 'overall score', 'dev score', 'social score', 'search score', 'percent change', 'price btc', 'market cap',
          'liquidity', 'stars', 'forks', 'watchers', 'total issues', 'closed issues', 'merged pr', 'contributors',
          'recent commits', 'subscribers', 'active users', 'posts per hr', 'comments per hr', 'fb likes',
-         'twitter followers', 'bing results', 'alexa rating', 'abr', 'hash', 'hash speed', 'mining hw cost']
+         'twitter followers', 'bing results', 'alexa rating', 'hash', 'hash speed', 'mining hw cost', 'week data', 'img']
 RAW_COLS = ['coin', 'overall score', 'market cap', 'liquidity', 'dev score', 'dev stats 1',
             'dev stats 2', 'social score', 'social stats 1', 'social stats 2',
             'search score', 'search stats']
@@ -27,6 +28,7 @@ class Scraper:
         self.timestamp = None
         self.url = 'https://www.coingecko.com/en'
         self.db = self.init_db()
+        self.images = None
 
     def pull(self):
         # gets features for each coin
@@ -37,8 +39,34 @@ class Scraper:
     def fetch(self):
         self.res = requests.get(self.url).text
 
+
     def process(self):
         # process scraped response data
+
+        def get_plots(res):
+            # Scrapes for the sign of the percent change
+            soup = BeautifulSoup(res, 'html5lib')
+            plot_map = {}
+            for coin in soup.findAll("tr"):
+                info = coin.find("td", {"class": "td-coin"})
+                if info:
+                    key = info.text.strip()[0:3]
+                    coin_img = str(info.find('img'))
+                    coin_img = coin_img.replace('<img alt="Loader" class="omni-coin-image" data-img', '<img src')
+                    data_raw = coin.find("div", {"class": "coin_portfolio_price_chart_mini_plain"})
+                    data = json.loads(data_raw.attrs['data-prices'])
+                    plot_map[key] = {'img': coin_img, 'week data': data}
+            return pd.DataFrame(plot_map).T
+
+        def get_coin_data(coin='bitcoin', cur='usd'):
+            url = 'https://www.coingecko.com/en/price_charts/%s/%s' % (coin, cur)
+            res = requests.get(url).text
+            df = pd.read_html(res, flavor='html5lib')[0]
+            for col in df:
+                df[col] = df[col].astype('str').str.replace(',', '').str.replace('$', '')
+            df[['Price', 'Market Cap', 'Trading Volume']] = df[['Price', 'Market Cap', 'Trading Volume']].apply(
+                pd.to_numeric)
+            return df
 
         def get_sign_map(res):
             # Scrapes for the sign of the percent change
@@ -75,17 +103,20 @@ class Scraper:
 
         # Set up data
         sign_map = get_sign_map(self.res)
+        plot_map = get_plots(self.res)
+        btc_usd = get_coin_data(coin='bitcoin')['Price'][0]
         self.timestamp = datetime.utcnow()
         df = pd.read_html(self.res, flavor='html5lib')[0]
         df = df[df.columns[1:13]]
         df.columns = RAW_COLS
+        # TODO make a clean function that removes all bad chars (btc char, $, % ect) then just clean all cols
         df['coin'][0] = df['coin'][0].replace(df['coin'][0][0:3], df['coin'][0][0:3] + ' ').replace('(', ' (').replace(
             '$', ' $').replace('฿', ' ฿')
         df = convert_col_type(df)
 
         # Split coin info
         df['coin'] = clean_coin_col(df['coin'])
-        df[['abr', 'name', 'hash', 'hash speed', 'mining hw cost', 'price']] = pd.DataFrame(df['coin'].values.tolist())
+        df[['abr', 'name', 'hash', 'hash speed', 'mining hw cost', 'price btc']] = pd.DataFrame(df['coin'].values.tolist())
 
         # Split unit features
         df[['market cap', 'percent change']] = pd.DataFrame(df['market cap'].values.tolist())
@@ -106,12 +137,18 @@ class Scraper:
         df['bing results'] = df['bing results'].str.replace(',', '')
 
         # Clean and format
+        df = df.set_index(df['abr'].values)
+        df = pd.concat([plot_map, df], axis=1, join='inner')  # merge plots with data
         df = df.drop(['coin', 'dev stats 1', 'dev stats 2', 'social stats 1', 'social stats 2', 'search stats'], axis=1)
         df[NUMERIC] = df[NUMERIC].apply(pd.to_numeric)
+        df['price usd'] = df['price btc'].apply(lambda x: x * btc_usd)
         df = df[ORDER]
         self.data = df
 
+
+
     def generate_html(self, name='temp.html'):
+        pd.set_option('display.max_colwidth', -1)
         head = '''
         <!DOCTYPE html><html>
         <head>
@@ -122,8 +159,13 @@ class Scraper:
         <body>
         <b>%s</b>
         ''' % (self.timestamp, self.timestamp)
+        df = self.data
+        df = df.drop(['week data'], axis=1)
+        cols = list(df)
+        cols.insert(0, cols.pop(cols.index('img')))
+        df = df[cols]
         foot = '''</body></html>'''
-        table = self.data.to_html().replace('class="dataframe"', 'class="sortable"')
+        table = df.to_html(escape=False).replace('class="dataframe"', 'class="sortable"')
         path = os.path.abspath(os.path.join('web', name))
         html = head + table + foot
         with open(path, 'w') as f:
@@ -140,31 +182,12 @@ class Scraper:
         return db
 
     def update_db(self):
-        self.data = self.data.set_index('abr')  # index by abr
         self.db.timeseries.insert_one({'date': self.timestamp, 'data': self.data.T.to_dict()})
 
 
 
         #
-        # def get_images_map(res):
-        #     # Scrapes for the sign of the percent change
-        #     soup = BeautifulSoup(res, 'html5lib')
-        #     img_map = {}
-        #     plot_map = {}
-        #
-        #     for coin in soup.findAll("tr"):
-        #         info = coin.find("td", {"class": "td-coin"})
-        #         if info:
-        #             key = info.text.strip()[0:3]
-        #             img = str(info.find('img'))
-        #             img = img.replace('<img alt="Loader" class="omni-coin-image"', '<img')
-        #             img_map[key] = img
-        #
-        #             plot = coin.find("div", {"class": "coin_portfolio_price_chart_mini_plain"})
-        #             print(plot.find("data-prices"))
-        #             plot_map[key] = plot
-        #
-        #     return img_map
+
 
 
 if __name__ == "__main__":

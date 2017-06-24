@@ -320,7 +320,6 @@ table,thead {
 
 td,th {
     padding: 0 1.7em;
-    vertical-align: top;
 }
 
 td:first-child,th:first-child {
