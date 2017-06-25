@@ -8,10 +8,11 @@ docker-scraper
 
 
 ###  MongoDB
-* make sure mongo db is running (`docker-compose up`)
-* backup: `docker exec -t  dockerscraper_db_1 mongodump --out /data/db/backup`
-* restore: `docker exec -t  dockerscraper_db_1 mongorestore /data/db/backup/coins -d coins` (replace coins with db name)
-* shell inside (for inspecting): `docker exec -it  dockerscraper_db_1 /bin/bash`
+* make sure mongo db is running (`docker-compose up` or `docker-compose run db`)
+* backup: `docker exec -t  crypto_db_1 mongodump --out /data/db/backup`
+* Note: from outside container you can remote in and backup (windows): `mongodump --host 10.0.75.1 --port 27017  --out [folder]`
+* restore: `docker exec -t  crypto_db_1 mongorestore /data/db/backup/coins -d coins` (replace coins with db name)
+* shell inside (for inspecting): `docker exec -it  crypto_db_1 /bin/bash`
 * clear: shell inside, then:
 ```
 $ mongo

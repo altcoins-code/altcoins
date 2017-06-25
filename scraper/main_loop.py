@@ -13,7 +13,6 @@ def scraper_loop():
     s = Scraper()
     print("Starting scraper...")
     while True:
-        # print("{}: Starting scrape cycle".format(time.ctime()))
         try:
             s.pull()
             db.update(s)
