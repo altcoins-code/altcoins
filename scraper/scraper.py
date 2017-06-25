@@ -1,3 +1,4 @@
+import json
 import os
 import webbrowser
 from datetime import datetime
@@ -6,20 +7,53 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
-import json
 
 NUMERIC = ['mining hw cost', 'price btc', 'market cap', 'percent change', 'liquidity', 'stars', 'forks', 'watchers',
            'total issues', 'closed issues', 'merged pr', 'contributors', 'recent commits', 'subscribers',
            'active users', 'posts per hr', 'comments per hr', 'fb likes', 'twitter followers', 'bing results',
            'alexa rating']
-ORDER = ['name', 'price usd', 'overall score', 'dev score', 'social score', 'search score', 'percent change', 'price btc', 'market cap',
+ORDER = ['name', 'price usd', 'overall score', 'dev score', 'social score', 'search score', 'percent change',
+         'price btc', 'market cap',
          'liquidity', 'stars', 'forks', 'watchers', 'total issues', 'closed issues', 'merged pr', 'contributors',
          'recent commits', 'subscribers', 'active users', 'posts per hr', 'comments per hr', 'fb likes',
-         'twitter followers', 'bing results', 'alexa rating', 'hash', 'hash speed', 'mining hw cost', 'week data', 'img']
+         'twitter followers', 'bing results', 'alexa rating', 'hash', 'hash speed', 'mining hw cost', 'week data',
+         'img']
 RAW_COLS = ['coin', 'overall score', 'market cap', 'liquidity', 'dev score', 'dev stats 1',
             'dev stats 2', 'social score', 'social stats 1', 'social stats 2',
             'search score', 'search stats']
 
+
+class MongoDB:
+    def __init__(self, host="localhost", port=27017, collection='timeseries'):
+        client = MongoClient(host, port)
+        self.db = client.coins
+        self.dates = None
+        if not collection in self.db.collection_names():
+            self.create_collection(collection)
+
+    def clear_collection(self, collection):
+        self.db.drop_collection(collection)
+
+    def create_collection(self, collection):
+        self.db.create_collection(collection)
+
+    def update(self, table):
+        self.db.timeseries.insert_one({'date': table.timestamp, 'data': table.data.T.to_dict()})
+
+    def list(self):
+        dates = []
+        for i, post in enumerate(self.db.timeseries.find()):
+            print('%d: %s' % (i, str(post['date'])))
+            dates.append(post['date'])
+        self.dates = dates
+
+    def get(self, date):
+        # date must be datetime object
+        return self.db.timeseries.find_one({"date": date})['data']
+
+    def remove(self, date):
+        # date must be datetime object
+        self.db.timeseries.delete_one({"date": date})
 
 class Scraper:
     def __init__(self):
@@ -27,18 +61,15 @@ class Scraper:
         self.data = None  # Organized data
         self.timestamp = None
         self.url = 'https://www.coingecko.com/en'
-        self.db = self.init_db()
         self.images = None
 
     def pull(self):
         # gets features for each coin
         self.fetch()
         self.process()
-        self.update_db()
 
     def fetch(self):
         self.res = requests.get(self.url).text
-
 
     def process(self):
         # process scraped response data
@@ -116,7 +147,8 @@ class Scraper:
 
         # Split coin info
         df['coin'] = clean_coin_col(df['coin'])
-        df[['abr', 'name', 'hash', 'hash speed', 'mining hw cost', 'price btc']] = pd.DataFrame(df['coin'].values.tolist())
+        df[['abr', 'name', 'hash', 'hash speed', 'mining hw cost', 'price btc']] = pd.DataFrame(
+            df['coin'].values.tolist())
 
         # Split unit features
         df[['market cap', 'percent change']] = pd.DataFrame(df['market cap'].values.tolist())
@@ -145,8 +177,6 @@ class Scraper:
         df = df[ORDER]
         self.data = df
 
-
-
     def generate_html(self, name='temp.html'):
         pd.set_option('display.max_colwidth', -1)
         head = '''
@@ -172,26 +202,11 @@ class Scraper:
             f.write(html)
         webbrowser.open('file://' + path)
 
-    def init_db(self):
-        client = MongoClient("localhost", 27017)
-        db = client.coins
-        collection = 'timeseries'
-        if not collection in db.collection_names():
-            print('Creating collection %s in coins db...' % collection)
-            db.create_collection('timeseries')
-        return db
-
-    def update_db(self):
-        self.db.timeseries.insert_one({'date': self.timestamp, 'data': self.data.T.to_dict()})
-
-
-
-        #
-
-
 
 if __name__ == "__main__":
+    store = MongoDB()
     s = Scraper()
     s.pull()
+    store.update(s)
     # s.data.to_pickle('test.pkl')
     s.generate_html('temp.html')

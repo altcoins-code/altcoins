@@ -1,0 +1,5 @@
+pymongo
+pandas
+requests
+beautifulsoup4
+html5lib

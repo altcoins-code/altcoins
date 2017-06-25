@@ -1,0 +1,14 @@
+scraper:
+  build: ./scraper
+  command: python -u main_loop.py
+  ports:
+    - '5000:5000'
+  volumes:
+    - ./scraper:/app
+  links:
+    - db
+
+db:
+  image: mongo
+  volumes:
+  - './mongodb-backup:/data/db/backup'
