@@ -1,8 +1,18 @@
+webapp:
+  build: .
+  command: python -u app.py
+  ports:
+    - "5000:5000"
+  volumes:
+    - .:/app
+  environment:
+    - PYTHONUNBUFFERED=0
+  links:
+    - db
+
 scraper:
   build: ./scraper
   command: python -u main_loop.py
-  ports:
-    - '5000:5000'
   volumes:
     - ./scraper:/app
   links:

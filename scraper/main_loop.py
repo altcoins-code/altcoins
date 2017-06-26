@@ -3,7 +3,8 @@ import os
 import sys
 import time
 
-from scraper import Scraper, MongoDB
+from scraper import Scraper
+from db import MongoDB
 
 SCRAPE_FREQ = 20  # minutes
 
