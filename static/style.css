@@ -319,16 +319,21 @@ table,thead {
 }
 
 td,th {
-    padding: 0 1.7em;
+    padding: 0 0.5em;
 }
 
-td:first-child,th:first-child {
-    padding-left: 0;
+/*custom for plots*/
+td:nth-child(11) {
+    padding: 0;
 }
 
-td:last-child,th:last-child {
-    padding-right: 0;
-}
+/*td:first-child,th:first-child {*/
+    /*padding-left: 0;*/
+/*}*/
+
+/*td:last-child,th:last-child {*/
+    /*padding-right: 0;*/
+/*}*/
 
 hr {
     width: 100%;
