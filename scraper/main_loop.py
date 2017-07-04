@@ -1,12 +1,13 @@
-import traceback
 import os
 import sys
 import time
+import traceback
 
-from scraper import Scraper
 from db import MongoDB
+from scraper import Scraper
 
 SCRAPE_FREQ = 20  # minutes
+
 
 def scraper_loop():
     db = MongoDB(host=os.environ['DB_PORT_27017_TCP_ADDR'], port=27017)
@@ -27,6 +28,7 @@ def scraper_loop():
         else:
             print("{}: Successfully finished scraping".format(s.timestamp))
         time.sleep(SCRAPE_FREQ * 60)
+
 
 if __name__ == "__main__":
     scraper_loop()

@@ -24,8 +24,8 @@ class Scraper:
         n_pages = 3
         for page in range(1, n_pages + 1):
             # gets features for each coin
-            self.page = page
             # print('Scraping page %d...' % page)
+            self.page = page
             self.fetch(base_url + str(page))
             frames.append(self.process())
         self.data = pd.concat(frames)
@@ -81,12 +81,6 @@ class Scraper:
             for r in col:
                 if r[2] == '-':
                     r[2] = 'N/A'
-                ## REMOVE HW COST AND MERGE HASH SPEED WITH HASH
-                # r[2] = r[2].replace('(', '').replace(')', '')
-                # if len(r) < 5:
-                #     r.insert(3, '')
-                # else:
-                #     r[3] = r[3].replace('$', '').replace(',', '')
                 if len(r) > 4:  # merge speed and hash
                     r[2] = r[2] + ' ' + r.pop(3)
                 r[3] = r[3].replace('฿', '')
@@ -147,6 +141,7 @@ class Scraper:
         df = df[ORDER]
         return df
 
+    # TODO abstract this out and combine with flask fcns
     def generate_html(self, name='temp.html'):
         def url_from_coin(name):
             coin_url = 'https://coinmarketcap.com/currencies/' + name.lower()
