@@ -1,28 +1,37 @@
 import json
 import os
-import webbrowser
-from datetime import datetime
-
 import pandas as pd
 import requests
+import webbrowser
 from bs4 import BeautifulSoup
+from datetime import datetime
+
 from constants import NUMERIC, ORDER, RAW_COLS
+
 
 class Scraper:
     def __init__(self):
         self.res = None  # Server response
         self.data = None  # Organized data
         self.timestamp = None
-        self.url = 'https://www.coingecko.com/en'
+        self.page = 1  # first N pages
+        self.btc_usd = None  # for conversion to usd
         self.images = None
 
     def pull(self):
-        # gets features for each coin
-        self.fetch()
-        self.process()
+        frames = []
+        base_url = 'https://www.coingecko.com/en?page='
+        n_pages = 3
+        for page in range(1, n_pages + 1):
+            # gets features for each coin
+            self.page = page
+            # print('Scraping page %d...' % page)
+            self.fetch(base_url + str(page))
+            frames.append(self.process())
+        self.data = pd.concat(frames)
 
-    def fetch(self):
-        self.res = requests.get(self.url).text
+    def fetch(self, url):
+        self.res = requests.get(url).text
 
     def process(self):
         # process scraped response data
@@ -34,7 +43,8 @@ class Scraper:
             for coin in soup.findAll("tr"):
                 info = coin.find("td", {"class": "td-coin"})
                 if info:
-                    key = info.text.strip()[0:3]
+                    first_nl = info.text.strip().index('\n')
+                    key = info.text.strip()[0:first_nl]
                     coin_img = str(info.find('img'))
                     coin_img = coin_img.replace('<img alt="Loader" class="omni-coin-image" data-img', '<img src')
                     data_raw = coin.find("div", {"class": "coin_portfolio_price_chart_mini_plain"})
@@ -62,17 +72,24 @@ class Scraper:
                 sign_map[amount] = sign
             return sign_map
 
+        def clean_first_coin_row(row):
+            # first row has messed up spacing which failes `clean_coin_col()`
+            return row.replace(row[0:row.index(' ')], row[0:row.index(' ')] + ' ').replace('$', ' $').replace('฿', ' ฿')
+
         def clean_coin_col(col):
             # Make all lists the same length, pad with '(N/A)'
             for r in col:
                 if r[2] == '-':
                     r[2] = 'N/A'
-                r[3] = r[3].replace('(', '').replace(')', '')
-                if len(r) < 6:
-                    r.insert(4, '')
-                else:
-                    r[4] = r[4].replace('$', '').replace(',', '')
-                r[5] = r[5].replace('฿', '')
+                ## REMOVE HW COST AND MERGE HASH SPEED WITH HASH
+                # r[2] = r[2].replace('(', '').replace(')', '')
+                # if len(r) < 5:
+                #     r.insert(3, '')
+                # else:
+                #     r[3] = r[3].replace('$', '').replace(',', '')
+                if len(r) > 4:  # merge speed and hash
+                    r[2] = r[2] + ' ' + r.pop(3)
+                r[3] = r[3].replace('฿', '')
 
             return col
 
@@ -88,20 +105,19 @@ class Scraper:
         # Set up data
         sign_map = get_sign_map(self.res)
         plot_map = get_plots(self.res)
-        btc_usd = get_coin_data(coin='bitcoin')['Price'][0]
+        if not self.btc_usd and self.page == 1:  # get btc price on page 1
+            self.btc_usd = get_coin_data(coin='bitcoin')['Price'][0]
         self.timestamp = datetime.utcnow()
         df = pd.read_html(self.res, flavor='html5lib')[0]
         df = df[df.columns[1:13]]
         df.columns = RAW_COLS
         # TODO make a clean function that removes all bad chars (btc char, $, % ect) then just clean all cols
-        df['coin'][0] = df['coin'][0].replace(df['coin'][0][0:3], df['coin'][0][0:3] + ' ').replace('(', ' (').replace(
-            '$', ' $').replace('฿', ' ฿')
+        df['coin'][0] = clean_first_coin_row(df['coin'][0])
         df = convert_col_type(df)
 
         # Split coin info
         df['coin'] = clean_coin_col(df['coin'])
-        df[['abr', 'name', 'hash', 'hash speed', 'mining hw cost', 'price btc']] = pd.DataFrame(
-            df['coin'].values.tolist())
+        df[['abr', 'name', 'hash', 'price btc']] = pd.DataFrame(df['coin'].values.tolist())
 
         # Split unit features
         df[['market cap', 'percent change']] = pd.DataFrame(df['market cap'].values.tolist())
@@ -123,14 +139,19 @@ class Scraper:
 
         # Clean and format
         df = df.set_index(df['abr'].values)
+        df = df[~df.index.duplicated(keep='first')]  # if duplicate coin keys
         df = pd.concat([plot_map, df], axis=1, join='inner')  # merge plots with data
         df = df.drop(['coin', 'dev stats 1', 'dev stats 2', 'social stats 1', 'social stats 2', 'search stats'], axis=1)
         df[NUMERIC] = df[NUMERIC].apply(pd.to_numeric)
-        df['price usd'] = df['price btc'].apply(lambda x: x * btc_usd)
+        df['price usd'] = df['price btc'].apply(lambda x: x * self.btc_usd)
         df = df[ORDER]
-        self.data = df
+        return df
 
     def generate_html(self, name='temp.html'):
+        def url_from_coin(name):
+            coin_url = 'https://coinmarketcap.com/currencies/' + name.lower()
+            return '<a href="%s" target="_blank">%s</a>' % (coin_url, name)
+
         pd.set_option('display.max_colwidth', -1)
         head = '''
         <!DOCTYPE html><html>
@@ -147,9 +168,10 @@ class Scraper:
         cols = list(df)
         cols.insert(0, cols.pop(cols.index('img')))
         df = df[cols]
+        df['name'] = df['name'].apply(url_from_coin)
         foot = '''</body></html>'''
         table = df.to_html(escape=False).replace('class="dataframe"', 'class="sortable"')
-        path = os.path.abspath(os.path.join('web', name))
+        path = os.path.abspath(name)
         html = head + table + foot
         with open(path, 'w') as f:
             f.write(html)
@@ -162,5 +184,5 @@ if __name__ == "__main__":
     s = Scraper()
     s.pull()
     # store.update(s)
-    # s.data.to_pickle('test.pkl')
+    s.data.to_pickle('test.pkl')
     # s.generate_html('temp.html')

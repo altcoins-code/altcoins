@@ -8,8 +8,8 @@ from scraper.constants import ORDER
 app = Flask(__name__)
 
 # TODO set up dev flag that loads a pandas df rather than mongo
-# db = MongoDB(host=os.environ['DB_PORT_27017_TCP_ADDR'], port=27017)  # for inside docker
-db = MongoDB(host='localhost', port=27017)  # debug
+db = MongoDB(host=os.environ['DB_PORT_27017_TCP_ADDR'], port=27017)  # for inside docker
+# db = MongoDB(host='localhost', port=27017)  # debug
 
 def create_plots(data):
     # iterate of array of raw data and make svg plot
@@ -21,10 +21,14 @@ def create_plots(data):
         plots.append(svg_str)
     return plots
 
+def url_from_coin(name):
+    coin_url = 'https://coinmarketcap.com/currencies/' + name.lower()
+    return '<a href="%s" target="_blank">%s</a>' % (coin_url, name)
 
 def df_to_html(df):
     pd.set_option('display.max_colwidth', -1)
     df['week data'] = create_plots(df['week data'].values)
+    df['name'] = df['name'].apply(url_from_coin)
     # df = df.drop(['week data'], axis=1)
     cols = list(df)  # reorder
     cols.insert(0, cols.pop(cols.index('img')))
