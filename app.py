@@ -8,8 +8,8 @@ from scraper.constants import ORDER
 app = Flask(__name__)
 
 # TODO set up dev flag that loads a pandas df rather than mongo
-db = MongoDB(host=os.environ['DB_PORT_27017_TCP_ADDR'], port=27017)  # for inside docker
-# db = MongoDB(host='localhost', port=27017)  # debug
+# db = MongoDB(host=os.environ['DB_PORT_27017_TCP_ADDR'], port=27017)  # for inside docker
+db = MongoDB(host='localhost', port=27017)  # debug
 
 def create_plots(data):
     # iterate of array of raw data and make svg plot
@@ -32,16 +32,21 @@ def df_to_html(df):
     df = df[cols]
     return df.to_html(escape=False).replace('class="dataframe"', 'class="sortable"')
 
-
-@app.route('/')
-def update():
-    print("Updating coin data...")
+def fetch_html():
     entry = db.pop()
     timestamp = entry['date'].strftime('%m-%d-%Y %H:%M')
     df = pd.DataFrame(entry['data']).T
     df = df[ORDER].sort_values('overall score', ascending=False)
     html_table = df_to_html(df)
-    return render_template('data.html', timestamp=timestamp, table=html_table)
+    page = render_template('data.html', timestamp=timestamp, table=html_table)
+    return page
+
+
+@app.route('/')
+def update():
+    print("Updating coin data...")
+    page = fetch_html()
+    return page
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', debug=True)
