@@ -1,15 +1,24 @@
 import os
+import requests
 from datetime import datetime
 
 from git import Repo
 
-from create_html import save_html, fetch_from_app
+from create_html import save_html
 
 # Update site at: https://jake-g.github.io/altcoins/
 
-url = 'http://localhost:5000'
-repo_path = '../static/'
+# url = 'http://localhost:5000' # local flag
+url = 'http://webapp:5000'
+# repo_path = '../static/' # local flag
+repo_path = '/static'
 fname = 'index.html'
+
+def fetch_from_app(url):
+    try:
+        return requests.get(url).text
+    except:
+        print('Request for data failed. Is app running on %s?' % url)
 
 
 def update_static_page():

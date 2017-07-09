@@ -1,8 +1,5 @@
 import pandas as pd
-import requests
 import pytz
-from constants import ORDER
-
 
 def create_plots(data):
     # iterate of array of raw data and make svg plot
@@ -20,7 +17,7 @@ def url_from_coin(name):
     return '<a href="%s" target="_blank">%s</a>' % (coin_url, name)
 
 
-def df_to_html(df):
+def df_to_html(df, ORDER):
     pd.set_option('display.max_colwidth', -1)
     df = df[ORDER].sort_values('overall score', ascending=False)
     df['week data'] = create_plots(df['week data'].values)
@@ -37,15 +34,7 @@ def get_df_from_db(db):
     entry = db.pop()
     date = entry['date'].replace(tzinfo=pytz.UTC)
     timestamp = date.astimezone(pytz.timezone('US/Pacific')).strftime('%m-%d-%Y %H:%M')
-    print(timestamp)
     return pd.DataFrame(entry['data']).T, timestamp
-
-
-def fetch_from_app(url):
-    try:
-        return requests.get(url).text
-    except:
-        raise ('Request for data failed. Is app running on %s?' % url)
 
 
 def save_html(html, path):

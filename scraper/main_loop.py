@@ -12,7 +12,7 @@ SCRAPE_FREQ = 20  # minutes
 
 def scraper_loop():
     db = MongoDB(host=os.environ['DB_PORT_27017_TCP_ADDR'], port=27017)
-    # db = MongoDB(host='localhost', port=27017)  # debug
+    # db = MongoDB(host='localhost', port=27017)  # local flag
 
     s = Scraper()
     print("Starting scraper...")

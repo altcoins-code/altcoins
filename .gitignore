@@ -2,7 +2,7 @@
 table.html
 
 old/
-
+.ssh/
 env/
 .ipynb_checkpoints
 .idea/

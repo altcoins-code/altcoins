@@ -15,8 +15,10 @@ scraper:
   command: python -u main_loop.py
   volumes:
     - ./scraper:/app
+    - ./static:/static
   links:
     - db
+    - webapp
 
 db:
   image: mongo
