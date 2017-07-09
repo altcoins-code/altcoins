@@ -1,10 +1,9 @@
 import json
-import os
+from datetime import datetime
+
 import pandas as pd
 import requests
-import webbrowser
 from bs4 import BeautifulSoup
-from datetime import datetime
 
 from constants import NUMERIC, ORDER, RAW_COLS
 
@@ -83,6 +82,7 @@ class Scraper:
                     r[2] = 'N/A'
                 if len(r) > 4:  # merge speed and hash
                     r[2] = r[2] + ' ' + r.pop(3)
+                r[2] = r[2].replace('(N/A)', '')
                 r[3] = r[3].replace('฿', '')
 
             return col
@@ -141,37 +141,6 @@ class Scraper:
         df = df[ORDER]
         return df
 
-    # TODO abstract this out and combine with flask fcns
-    def generate_html(self, name='temp.html'):
-        def url_from_coin(name):
-            coin_url = 'https://coinmarketcap.com/currencies/' + name.lower()
-            return '<a href="%s" target="_blank">%s</a>' % (coin_url, name)
-
-        pd.set_option('display.max_colwidth', -1)
-        head = '''
-        <!DOCTYPE html><html>
-        <head>
-        <title>%s</title>
-        <link href="style.css" rel="stylesheet">
-        <script src="sorttable.js"></script>
-        </head>
-        <body>
-        <b>%s</b>
-        ''' % (self.timestamp, self.timestamp)
-        df = self.data
-        df = df.drop(['week data'], axis=1)
-        cols = list(df)
-        cols.insert(0, cols.pop(cols.index('img')))
-        df = df[cols]
-        df['name'] = df['name'].apply(url_from_coin)
-        foot = '''</body></html>'''
-        table = df.to_html(escape=False).replace('class="dataframe"', 'class="sortable"')
-        path = os.path.abspath(name)
-        html = head + table + foot
-        with open(path, 'w') as f:
-            f.write(html)
-        webbrowser.open('file://' + path)
-
 
 if __name__ == "__main__":
     # from db import MongoDB
@@ -180,4 +149,3 @@ if __name__ == "__main__":
     s.pull()
     # store.update(s)
     s.data.to_pickle('test.pkl')
-    # s.generate_html('temp.html')

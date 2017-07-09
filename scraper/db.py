@@ -1,5 +1,7 @@
-import pymongo
 import pprint
+
+import pymongo
+
 
 class MongoDB:
     def __init__(self, host="localhost", port=27017, collection='timeseries'):
@@ -41,5 +43,3 @@ if __name__ == "__main__":
     store = MongoDB()
     pprint.pprint(store.pop()['data'])
     # store.list()
-
-
