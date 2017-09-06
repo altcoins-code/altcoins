@@ -1,4 +1,4 @@
-NUMERIC = ['price btc', 'market cap', 'percent change', 'liquidity', 'stars', 'forks', 'watchers',
+NUMERIC = ['price usd', 'price btc', 'market cap', 'percent change', 'liquidity', 'stars', 'forks', 'watchers',
            'total issues', 'closed issues', 'merged pr', 'contributors', 'recent commits', 'subscribers',
            'active users', 'posts per hr', 'comments per hr', 'fb likes', 'twitter followers', 'bing results',
            'alexa rating']
