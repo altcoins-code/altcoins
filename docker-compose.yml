@@ -22,5 +22,7 @@ scraper:
 
 db:
   image: mongo
+  ports:
+    - 27017:27017
   volumes:
-  - './mongodb-backup:/data/db/backup'
+    - './mongodb-backup:/data/db/backup'
