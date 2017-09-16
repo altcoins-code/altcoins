@@ -179,6 +179,6 @@ if __name__ == "__main__":
     # store = MongoDB(host=os.environ['DB_PORT_27017_TCP_ADDR'], port=27017) # for inside docker
     s = Scraper()
     s.pull()
-    print(s.data.head())
+    # print(s.data.head())
     # store.update(s)
-    # s.data.to_pickle('test.pkl')
+    #s.data.to_pickle('test.pkl')
