@@ -4,28 +4,24 @@ from datetime import datetime
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-
-from constants import NUMERIC, ORDER, RAW_COLS
-
+from create_html import use
+from mongo import ORDER, NUMERIC, RAW_COLS
 
 class Scraper:
     def __init__(self):
         self.res = None  # Server response
         self.data = None  # Organized data
         self.timestamp = None
-        self.page = 1  # first N pages
         self.images = None
+        self.apikey = 'aHR0cHM6Ly93d3cuY29pbmdlY2tvLmNvbQ==\n'
 
-    def pull(self):
+    def pull(self, n_pages=3):
         """Pull and format data into datafram"""
         frames = []
-        base_url = 'https://www.coingecko.com/en?page='
-        n_pages = 3
         for page in range(1, n_pages + 1):
             # gets features for each coin
             # print('Scraping page %d...' % page)
-            self.page = page
-            self.fetch(base_url + str(page))
+            self.fetch('%s/en?page=%s' % (use(self.apikey).decode(), str(page)))
             frames.append(self.process())
         self.data = pd.concat(frames)
 
@@ -88,7 +84,7 @@ class Scraper:
 
         def get_coin_data(coin='bitcoin', cur='usd'):  # DEPRECATED
             """Scrape info from coin specific page"""
-            url = 'https://www.coingecko.com/en/price_charts/%s/%s' % (coin, cur)
+            url = '%s/en/price_charts/%s/%s' % (use(self.apikey).decode(), coin, cur)
             res = requests.get(url).text
             df = pd.read_html(res, flavor='html5lib')[0]
             for col in df:
@@ -174,8 +170,10 @@ class Scraper:
         return df
 
 
+
 if __name__ == "__main__":
-    # from db import MongoDB
+    ## Sort of tests to try out..
+    # from mongo import MongoDB
     # store = MongoDB(host=os.environ['DB_PORT_27017_TCP_ADDR'], port=27017) # for inside docker
     s = Scraper()
     s.pull()

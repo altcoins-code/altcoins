@@ -2,8 +2,7 @@ from flask import Flask, render_template
 import os
 
 from scraper.create_html import get_df_from_db, df_to_html
-from scraper.db import MongoDB
-from scraper.constants import ORDER
+from scraper.mongo import MongoDB, ORDER
 
 app = Flask(__name__)
 

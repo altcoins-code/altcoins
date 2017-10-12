@@ -3,12 +3,12 @@ import time
 import traceback
 import os
 
-from db import MongoDB
+from mongo import MongoDB
 from scraper import Scraper
 from static_site import update_static_page
 
 SCRAPE_FREQ = 20  # minutes
-
+NPAGE = 3 # number of altcoin pages to scrape
 
 def scraper_loop():
     db = MongoDB(host=os.environ['DB_PORT_27017_TCP_ADDR'], port=27017)
@@ -18,7 +18,7 @@ def scraper_loop():
     print("Starting scraper...")
     while True:
         try:
-            s.pull()
+            s.pull(n_pages=NPAGE) # number of altcound pages to scrape)
             db.update(s)
             update_static_page()
 

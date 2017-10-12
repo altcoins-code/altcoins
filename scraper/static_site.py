@@ -6,11 +6,16 @@ from git import Repo
 
 from create_html import save_html
 
-# Update site at: https://jake-g.github.io/altcoins/
+'''
+Push the localhost html to git so it can be hosted live (for free)
+'''
+
+# Update site at: altcoins-code.github.io/altcoins/
 
 # url = 'http://localhost:5000' # local flag
-url = 'http://webapp:5000'
 # repo_path = '../static/' # local flag
+
+url = 'http://webapp:5000'
 repo_path = '/static'
 fname = 'index.html'
 
@@ -28,6 +33,7 @@ def update_static_page():
 
 
 def git_push():
+    # commit and push bot
     time = datetime.utcnow().strftime('%m-%d-%Y %H:%M')
     repo = Repo(repo_path)
     assert not repo.bare

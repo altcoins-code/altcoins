@@ -9,6 +9,8 @@ webapp:
     - PYTHONUNBUFFERED=0
   links:
     - db
+  restart: always
+
 
 scraper:
   build: ./scraper
@@ -19,6 +21,8 @@ scraper:
   links:
     - db
     - webapp
+  restart: always
+
 
 db:
   image: mongo
@@ -26,3 +30,4 @@ db:
     - 27017:27017
   volumes:
     - './mongodb-backup:/data/db/backup'
+  restart: always

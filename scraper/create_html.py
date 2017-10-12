@@ -1,5 +1,10 @@
 import pandas as pd
 import pytz
+from base64 import b64decode as use
+
+'''
+Hacky code for generating web assets and stuff
+'''
 
 def create_plots(data):
     # iterate of array of raw data and make svg plot
@@ -13,7 +18,8 @@ def create_plots(data):
 
 
 def url_from_coin(name):
-    coin_url = 'https://coinmarketcap.com/currencies/' + name.lower()
+    coin_key = 'aHR0cHM6Ly9jb2lubWFya2V0Y2FwLmNvbS9jdXJyZW5jaWVzLw==\n'
+    coin_url = use(coin_key).decode() + name.lower()
     return '<a href="%s" target="_blank">%s</a>' % (coin_url, name)
 
 

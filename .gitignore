@@ -1,6 +1,7 @@
 .DS_Store
 table.html
-
+mongodb-backup/
+notebooks/
 old/
 .ssh/
 env/
