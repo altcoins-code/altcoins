@@ -1,0 +1,38 @@
+svg {
+  font: 10px sans-serif;
+}
+
+
+path {
+  stroke: #cccccc;
+  /*stroke-width: 1px;*/
+  fill: #cccccc;
+  
+}
+
+.axis {
+  display: none;
+  shape-rendering: crispEdges;
+}
+
+/*.x.axis text { 
+  display: none; 
+}*/
+
+.x.axis line, .x.axis path  {
+  fill: none;
+  stroke: #000;
+}
+
+/*.x.axis .minor {
+  stroke-opacity: .5;
+}*/
+
+.x.axis path {
+  display: none;
+}
+
+.y.axis line, .y.axis path {
+  fill: none;
+  stroke: #000;
+}
